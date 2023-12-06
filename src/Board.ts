@@ -1,8 +1,19 @@
-import { GemColor, type Field, Move, Pos, BoardType } from "./types";
+import { GemColor, Field, Move, Pos, BoardType, Row, Shape, Compound } from "./types";
 
 const areNextToEachOther = (pos1: Pos, pos2: Pos): boolean => {
     return Math.abs(pos1.x - pos2.x) + Math.abs(pos1.y - pos2.y) === 1;
 }
+
+const doRowsOverlap = (row1: Row, row2: Row): boolean => {
+    for (let square1 of row1.squares) {
+        for (let square2 of row2.squares) {
+            if (square1.x === square2.x && square1.y === square2.y) {
+                return true;
+            }
+        }
+    }
+    return false;
+};
 
 export default class Board {
 
@@ -75,8 +86,8 @@ export default class Board {
      */
     private applyMoveToBoard(board: BoardType, move: Move) {
 
-        // create a copy of the board
-        board = board.slice();
+        // create a deep copy of the board
+        board = JSON.parse(JSON.stringify(board));
 
         const fromField = this.getField(move.from)!;
         const toField = this.getField(move.to)!;
@@ -97,8 +108,8 @@ export default class Board {
     /**
      * gets all horizontal and vertical rows of at least minLength that are the same color.
      */
-    private getRows(board: BoardType, minLength = 3): GemColor[][][] {
-        let rows: GemColor[][][] = [];
+    private getRows(board: BoardType, minLength = 3): Row[] {
+        let rows: Row[] = [];
 
         // Check horizontally
         for (let y = 0; y < this.height; y++) {
@@ -108,15 +119,23 @@ export default class Board {
                     count++;
                 } else {
                     if (count >= minLength) {
-                        // @ts-ignore
-                        rows.push(board[y].slice(x - count, x).map(field => field.gem));
+                        let row = [];
+                        for (let i = x - count; i < x; i++) {
+                            // @ts-ignore
+                            row.push({ x: i, y: y, color: board[y][i].gem });
+                        }
+                        rows.push({ type: "ROW", length: count, squares: row });
                     }
                     count = 1;
                 }
             }
             if (count >= minLength) {
-                // @ts-ignore
-                rows.push(board[y].slice(this.width - count).map(field => field.gem));
+                let row = [];
+                for (let i = this.width - count; i < this.width; i++) {
+                    // @ts-ignore
+                    row.push({ x: i, y: y, color: board[y][i].gem });
+                }
+                rows.push({ type: "ROW", length: count, squares: row });
             }
         }
 
@@ -128,17 +147,57 @@ export default class Board {
                     count++;
                 } else {
                     if (count >= minLength) {
-                        // @ts-ignore
-                        rows.push(board.slice(y - count, y).map(row => row[x].gem));
+                        let column = [];
+                        for (let i = y - count; i < y; i++) {
+                            // @ts-ignore
+                            column.push({ x: x, y: i, color: board[i][x].gem });
+                        }
+                        rows.push({ type: "ROW", length: count, squares: column });
                     }
                     count = 1;
                 }
             }
             if (count >= minLength) {
-                // @ts-ignore
-                rows.push(board.slice(this.height - count).map(row => row[x].gem));
+                let column = [];
+                for (let i = this.height - count; i < this.height; i++) {
+                    // @ts-ignore
+                    column.push({ x: x, y: i, color: board[i][x].gem });
+                }
+                rows.push({ type: "ROW", length: count, squares: column });
             }
         }
         return rows;
+    }
+    /**
+     * combines overlapping rows into compounds.
+     * 
+     * returns a list of compounds and rows that aren't part of a compound.
+     */
+    public getShapes(): Shape[] {
+
+        const rows = this.getRows(this.board);
+        const shapes: Shape[] = [];
+        const usedRows = new Set<number>();
+
+        for (let i = 0; i < rows.length; i++) {
+            if (!usedRows.has(i)) {
+                let compound: Compound = { type: "COMPOUND", rows: [rows[i]] };
+                for (let j = i + 1; j < rows.length; j++) {
+                    if (doRowsOverlap(rows[i], rows[j])) {
+                        compound.rows.push(rows[j]);
+                        usedRows.add(j);
+                    }
+                }
+
+                if (compound.rows.length > 1) {
+                    shapes.push(compound);
+                } else {
+                    shapes.push(rows[i]);
+                }
+
+                usedRows.add(i);
+            }
+        }
+        return shapes;
     }
 }

@@ -21,3 +21,11 @@ export type Move = {
     from: Pos,
     to: Pos,
 }
+
+export type Row = { type: "ROW", length: number, squares: { x: number, y: number, color: GemColor }[] }
+
+export type Compound = {
+    type: "COMPOUND",
+    rows: Row[],
+}
+export type Shape = Row | Compound;
