@@ -4,15 +4,18 @@ const areNextToEachOther = (pos1: Pos, pos2: Pos): boolean => {
     return Math.abs(pos1.x - pos2.x) + Math.abs(pos1.y - pos2.y) === 1;
 }
 
-const doRowsOverlap = (row1: Row, row2: Row): boolean => {
+const getOverlappingSquares = (row1: Row, row2: Row): Pos[] => {
+
+    let overlappingSquares: Pos[] = [];
+
     for (let square1 of row1.squares) {
         for (let square2 of row2.squares) {
             if (square1.x === square2.x && square1.y === square2.y) {
-                return true;
+                overlappingSquares.push(square1);
             }
         }
     }
-    return false;
+    return overlappingSquares;
 };
 
 export default class Board {
@@ -24,7 +27,9 @@ export default class Board {
     }
     private createRandomField(): Field {
 
-        const gem = Object.keys(GemColor)[Math.floor(Math.random() * Object.keys(GemColor).length)] as GemColor;
+        const generatableColors = Object.keys(GemColor).slice(0, -1);
+
+        const gem = generatableColors[Math.floor(Math.random() * generatableColors.length)] as GemColor;
 
         return {
             gem,
@@ -48,7 +53,7 @@ export default class Board {
     }
     public render(): string {
 
-        const result = this.board.map(row => row.map(field => GemColor[field.gem]).join('')).join('\n');
+        const result = this.board.map(row => row.map(field => field.gem ? GemColor[field.gem] : "  ").join('')).join('\n');
 
         return result;
     }
@@ -91,12 +96,42 @@ export default class Board {
 
         const fromField = this.getField(move.from)!;
         const toField = this.getField(move.to)!;
-    
+
         board[move.from.y][move.from.x] = toField;
         board[move.to.y][move.to.x] = fromField;
 
         return board;
     }
+    public tick() {
+
+        const shapes = this.getShapes();
+
+        // do compounds first
+        for (const compound of shapes.filter(i => i.type === "COMPOUND") as Compound[]) {
+
+            for (const row of compound.rows) {
+
+                for (const square of row.squares) {
+
+                    this.board[square.y][square.x].gem = null;
+                }
+            }
+            for (const intersection of compound.intersections) {
+
+                // @ts-ignore
+                this.board[intersection.y][intersection.x].gem = "BOMB";
+            }
+        }
+        // then do rows
+        for (const row of shapes.filter(i => i.type === "ROW") as Row[]) {
+            for (const square of row.squares) {
+
+                this.board[square.y][square.x].gem = null;
+            }
+        }
+        // TODO: fill empty squares
+    }
+
     public makeMove(move: Move) {
 
         if (!this.isLegalMove(move)) return false;
@@ -181,10 +216,17 @@ export default class Board {
 
         for (let i = 0; i < rows.length; i++) {
             if (!usedRows.has(i)) {
-                let compound: Compound = { type: "COMPOUND", rows: [rows[i]] };
+                let compound: Compound = { type: "COMPOUND", rows: [rows[i]], intersections: [] };
+
                 for (let j = i + 1; j < rows.length; j++) {
-                    if (doRowsOverlap(rows[i], rows[j])) {
+
+                    const overlappingSquares = getOverlappingSquares(rows[i], rows[j]);
+
+                    if (overlappingSquares.length) {
                         compound.rows.push(rows[j]);
+
+                        compound.intersections = [...compound.intersections, ...overlappingSquares];
+
                         usedRows.add(j);
                     }
                 }
@@ -194,7 +236,6 @@ export default class Board {
                 } else {
                     shapes.push(rows[i]);
                 }
-
                 usedRows.add(i);
             }
         }

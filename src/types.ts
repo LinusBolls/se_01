@@ -4,10 +4,11 @@ export enum GemColor {
     GREEN = '🟩',
     YELLOW = '🟡',
     PURPLE = '💜',
+    BOMB = '💣',
 }
 
 export type Field = {
-    gem: GemColor;
+    gem: GemColor | null;
 }
 
 export type BoardType = Field[][];
@@ -26,6 +27,7 @@ export type Row = { type: "ROW", length: number, squares: { x: number, y: number
 
 export type Compound = {
     type: "COMPOUND",
+    intersections: Pos[],
     rows: Row[],
 }
 export type Shape = Row | Compound;

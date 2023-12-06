@@ -55,13 +55,13 @@ async function main() {
 
         return;
     }
-    console.log(board.render());
-
     const compounds = board.getShapes().filter(shape => shape.type === "COMPOUND");
 
     if (compounds.length) {
-        console.log("🎉 this board contains " + compounds.length +  " compound shapes! 🎉");
+        console.log("🎉 you created " + compounds.length +  " bombs! 🎉");
     }
-    console.log(board.getShapes());
+    board.tick();
+
+    console.log(board.render());
 }
 main();
