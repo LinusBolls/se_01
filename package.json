@@ -1,0 +1,15 @@
+{
+  "name": "se_01",
+  "version": "1.0.0",
+  "description": "`SE_01 Software Development Basics` assessment at CODE University of Applied Sciences",
+  "main": "src/index.ts",
+  "scripts": {
+    "start": "bun run src/index.ts",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "https://github.com/LinusBolls",
+  "license": "ISC",
+  "devDependencies": {
+    "bun": "^1.0.15"
+  }
+}
